@@ -1,7 +1,9 @@
 use thiserror::Error;
 
+/// Type alias to `Result<T, Error>`.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
+/// Error type of this crate.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Failed to create named lock")]

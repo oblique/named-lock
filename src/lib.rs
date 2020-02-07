@@ -1,5 +1,5 @@
 //! This crate provides a simple and cross-platform implementation of named locks.
-//! You can use this to lock critical sections between processes.
+//! You can use this to lock sections between processes.
 //!
 //! ## Example
 //!
@@ -22,7 +22,7 @@
 //! On UNIX systems this is implemented by using files and [`flock`]. The path of
 //! the created lock file will be `/tmp/<name>.lock`.
 //!
-//! On Windows this is implemented by creating named mutex ([`CreateMutexW`]).
+//! On Windows this is implemented by creating named mutex with [`CreateMutexW`].
 //!
 //!
 //! [`flock`]: https://linux.die.net/man/2/flock
@@ -51,20 +51,26 @@ use crate::windows::RawNamedLock;
 // as many times you want. However OS does not keep a counter, so only one
 // unlock must be performed. To avoid re-locking, we guard it with real mutex.
 //
-// On Windows systems, after locking a `HANDLE` you can create another
-// `HANDLE` for the same named lock and the same process and Windows
-// will allow you to re-lock it. To avoid this, we ensure that one `HANDLE`
-// exists in each process for each name.
+// On Windows, after locking a `HANDLE` you can create another `HANDLE` for
+// the same named lock and the same process and Windows will allow you to
+// re-lock it. To avoid this, we ensure that one `HANDLE` exists in each
+// process for each name.
 static OPENED_RAW_LOCKS: Lazy<
     Mutex<HashMap<String, Weak<Mutex<RawNamedLock>>>>,
 > = Lazy::new(|| Mutex::new(HashMap::new()));
 
+/// Cross-process lock that is identified by name.
 #[derive(Debug)]
 pub struct NamedLock {
     raw: Arc<Mutex<RawNamedLock>>,
 }
 
 impl NamedLock {
+    /// Create/open a named lock.
+    ///
+    /// On UNIX systems this will create/open a file at `/tmp/<name>.lock`.
+    ///
+    /// On Windows this will create/open a named mutex.
     pub fn create(name: &str) -> Result<NamedLock> {
         let mut opened_locks = OPENED_RAW_LOCKS.lock();
 
@@ -82,6 +88,9 @@ impl NamedLock {
         })
     }
 
+    /// Try to lock named lock.
+    ///
+    /// If it is already locked, `Error::WouldBlock` will be returned.
     pub fn try_lock<'r>(&'r self) -> Result<NamedLockGuard<'r>> {
         let guard = self.raw.try_lock().ok_or(Error::WouldBlock)?;
 
@@ -92,6 +101,7 @@ impl NamedLock {
         })
     }
 
+    /// Lock named lock.
     pub fn lock<'r>(&'r self) -> Result<NamedLockGuard<'r>> {
         let guard = self.raw.lock();
 
@@ -103,6 +113,7 @@ impl NamedLock {
     }
 }
 
+/// Scoped guard that unlocks NamedLock.
 #[derive(Debug)]
 pub struct NamedLockGuard<'r> {
     raw: MutexGuard<'r, RawNamedLock>,

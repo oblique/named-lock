@@ -5,7 +5,7 @@
 [![docs][docs badge]][docs]
 
 This crate provides a simple and cross-platform implementation of named locks.
-You can use this to lock critical sections between processes.
+You can use this to lock sections between processes.
 
 ## Example
 
@@ -28,7 +28,7 @@ fn main() -> Result<()> {
 On UNIX systems this is implemented by using files and [`flock`]. The path of
 the created lock file will be `/tmp/<name>.lock`.
 
-On Windows this is implemented by creating named mutex ([`CreateMutexW`]).
+On Windows this is implemented by creating named mutex with [`CreateMutexW`].
 
 
 [license]: LICENSE
