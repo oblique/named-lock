@@ -31,7 +31,7 @@ impl RawNamedLock {
         unsafe { flock(self.lock_file.as_raw_fd(), LOCK_EX | LOCK_NB) }
     }
 
-    pub(crate) fn lock<'m>(&'m self) -> Result<()> {
+    pub(crate) fn lock(&self) -> Result<()> {
         unsafe { flock(self.lock_file.as_raw_fd(), LOCK_EX) }
     }
 
