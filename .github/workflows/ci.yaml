@@ -1,0 +1,51 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+    tests:
+        name: Tests
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest, macos-latest]
+        env:
+            RUST_BACKTRACE: 1
+        steps:
+            - name: Install toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  profile: minimal
+                  toolchain: stable
+            - name: Checkout sources
+              uses: actions/checkout@v1
+            - name: Build
+              uses: actions-rs/cargo@v1
+              with:
+                  command: build
+                  args: --tests --examples
+            - name: Run tests
+              uses: actions-rs/cargo@v1
+              with:
+                  command: test
+    lints:
+        name: Lints
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  profile: minimal
+                  toolchain: stable
+                  override: true
+                  components: rustfmt, clippy
+            - uses: actions/checkout@v1
+            - name: Run cargo fmt
+              uses: actions-rs/cargo@v1
+              with:
+                  command: fmt
+                  args: --all -- --check
+            - name: Run cargo clippy
+              uses: actions-rs/cargo@v1
+              with:
+                  command: clippy
+                  args: -- -D clippy::all
