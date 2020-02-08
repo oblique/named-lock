@@ -161,7 +161,7 @@ mod tests {
                 sleep(Duration::from_millis(100));
 
                 let mut handle2 = call_proc_num(2, &uuid);
-                sleep(Duration::from_millis(100));
+                sleep(Duration::from_millis(200));
 
                 let lock = NamedLock::create(&uuid)?;
                 assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
@@ -176,14 +176,15 @@ mod tests {
 
                 let _guard = lock.lock().expect("failed to lock");
                 assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
-                sleep(Duration::from_millis(300));
+                sleep(Duration::from_millis(200));
             }
             2 => {
                 let lock =
                     NamedLock::create(&uuid).expect("failed to create lock");
 
                 assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
-                lock.lock().expect("failed to lock");
+                let _guard = lock.lock().expect("failed to lock");
+                sleep(Duration::from_millis(300));
             }
             _ => unreachable!(),
         }
