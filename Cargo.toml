@@ -26,4 +26,3 @@ widestring = "0.4"
 [dev-dependencies]
 matches = "0.1"
 uuid = { version = "0.8", features = ["v4"] }
-mitosis = { git = "https://github.com/Manishearth/mitosis", rev = "9105bbd" }
