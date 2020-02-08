@@ -129,31 +129,44 @@ impl<'r> Drop for NamedLockGuard<'r> {
 mod tests {
     use super::*;
     use matches::assert_matches;
+    use std::thread::sleep;
+    use std::time::Duration;
     use uuid::Uuid;
 
     #[test]
-    fn check_lock() -> Result<()> {
+    fn cross_process_lock() -> Result<()> {
+        mitosis::init();
         let uuid = Uuid::new_v4().to_hyphenated().to_string();
-        let lock1 = NamedLock::create(&uuid)?;
-        let lock2 = NamedLock::create(&uuid)?;
 
-        {
-            let _guard1 = lock1.lock()?;
-            assert_matches!(lock1.try_lock(), Err(Error::WouldBlock));
-            assert_matches!(lock2.try_lock(), Err(Error::WouldBlock));
-        }
+        let handle1 = mitosis::spawn(uuid.clone(), |uuid| {
+            let lock = NamedLock::create(&uuid).expect("failed to create lock");
+            let _guard = lock.lock().expect("failed to lock");
 
-        {
-            let _guard2 = lock2.lock()?;
-            assert_matches!(lock1.try_lock(), Err(Error::WouldBlock));
-            assert_matches!(lock2.try_lock(), Err(Error::WouldBlock));
-        }
+            assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
+            sleep(Duration::from_millis(300));
+        });
+        sleep(Duration::from_millis(100));
+
+        let handle2 = mitosis::spawn(uuid.clone(), |uuid| {
+            let lock = NamedLock::create(&uuid).expect("failed to create lock");
+            assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
+            lock.lock().unwrap();
+        });
+        sleep(Duration::from_millis(100));
+
+        let lock = NamedLock::create(&uuid)?;
+        assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
+        lock.lock().unwrap();
+
+        handle1.join().unwrap();
+        handle2.join().unwrap();
+        lock.try_lock().unwrap();
 
         Ok(())
     }
 
     #[test]
-    fn check_try_lock() -> Result<()> {
+    fn edge_cases() -> Result<()> {
         let uuid = Uuid::new_v4().to_hyphenated().to_string();
         let lock1 = NamedLock::create(&uuid)?;
         let lock2 = NamedLock::create(&uuid)?;
