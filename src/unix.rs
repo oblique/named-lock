@@ -12,15 +12,13 @@ pub(crate) struct RawNamedLock {
 }
 
 impl RawNamedLock {
-    pub(crate) fn create(name: &str) -> Result<RawNamedLock> {
-        let lock_path = Path::new("/tmp").join(format!("{}.lock", name));
-
+    pub(crate) fn create(lock_path: &Path) -> Result<RawNamedLock> {
         let lock_file = OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&lock_path)
             .or_else(|_| OpenOptions::new().write(true).open(&lock_path))
-            .map_err(|_| Error::CreateFailed)?;
+            .map_err(Error::CreateFailed)?;
 
         Ok(RawNamedLock {
             lock_file,

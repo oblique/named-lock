@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! This crate provides a simple and cross-platform implementation of named locks.
 //! You can use this to lock sections between processes.
 //!
@@ -31,6 +33,8 @@
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, MutexGuard};
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 
 mod error;
@@ -45,6 +49,11 @@ use crate::unix::RawNamedLock;
 #[cfg(windows)]
 use crate::windows::RawNamedLock;
 
+#[cfg(unix)]
+type NameType = PathBuf;
+#[cfg(windows)]
+type NameType = String;
+
 // We handle two edge cases:
 //
 // On UNIX systems, after locking a file descriptor you can lock it again
@@ -56,7 +65,7 @@ use crate::windows::RawNamedLock;
 // re-lock it. To avoid this, we ensure that one `HANDLE` exists in each
 // process for each name.
 static OPENED_RAW_LOCKS: Lazy<
-    Mutex<HashMap<String, Weak<Mutex<RawNamedLock>>>>,
+    Mutex<HashMap<NameType, Weak<Mutex<RawNamedLock>>>>,
 > = Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Cross-process lock that is identified by name.
@@ -68,17 +77,58 @@ pub struct NamedLock {
 impl NamedLock {
     /// Create/open a named lock.
     ///
-    /// On UNIX systems this will create/open a file at `/tmp/<name>.lock`.
+    /// # UNIX
     ///
-    /// On Windows this will create/open a named mutex.
+    /// This will create/open a file at `/tmp/<name>.lock`. If you want to
+    /// specify the exact path, then use [NamedLock::with_path].
+    ///
+    /// # Windows
+    ///
+    /// This will create/open a [global] mutex with [`CreateMutexW`].
+    ///
+    /// [global]: https://docs.microsoft.com/en-us/windows/win32/termserv/kernel-object-namespaces
+    /// [`CreateMutexW`]: https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw
     pub fn create(name: &str) -> Result<NamedLock> {
+        // On UNIX we want to restrict the user on `/tmp` directory,
+        // so we block the `/` character.
+        //
+        // On Windows `\` character is invalid.
+        if name.contains('/') || name.contains('\\') {
+            return Err(Error::InvalidCharacter);
+        }
+
+        #[cfg(unix)]
+        let name = Path::new("/tmp").join(format!("{}.lock", name));
+
+        #[cfg(windows)]
+        let name = format!("Global\\{}", name);
+
+        NamedLock::_create(name)
+    }
+
+    /// Create/open a named lock on specified path.
+    ///
+    /// # Notes
+    ///
+    /// * This function does not append `.lock` on the path
+    /// * Parent directories must exist
+    #[cfg(unix)]
+    #[cfg_attr(docsrs, doc(cfg(unix)))]
+    pub fn with_path<P>(path: P) -> Result<NamedLock>
+    where
+        P: AsRef<Path>,
+    {
+        NamedLock::_create(path.as_ref().to_owned())
+    }
+
+    fn _create(name: NameType) -> Result<NamedLock> {
         let mut opened_locks = OPENED_RAW_LOCKS.lock();
 
-        let lock = match opened_locks.get(name).and_then(|x| x.upgrade()) {
+        let lock = match opened_locks.get(&name).and_then(|x| x.upgrade()) {
             Some(lock) => lock,
             None => {
-                let lock = Arc::new(Mutex::new(RawNamedLock::create(name)?));
-                opened_locks.insert(name.to_owned(), Arc::downgrade(&lock));
+                let lock = Arc::new(Mutex::new(RawNamedLock::create(&name)?));
+                opened_locks.insert(name, Arc::downgrade(&lock));
                 lock
             }
         };
@@ -91,7 +141,7 @@ impl NamedLock {
     /// Try to lock named lock.
     ///
     /// If it is already locked, `Error::WouldBlock` will be returned.
-    pub fn try_lock<'r>(&'r self) -> Result<NamedLockGuard<'r>> {
+    pub fn try_lock(&self) -> Result<NamedLockGuard> {
         let guard = self.raw.try_lock().ok_or(Error::WouldBlock)?;
 
         guard.try_lock()?;
@@ -102,7 +152,7 @@ impl NamedLock {
     }
 
     /// Lock named lock.
-    pub fn lock<'r>(&'r self) -> Result<NamedLockGuard<'r>> {
+    pub fn lock(&self) -> Result<NamedLockGuard> {
         let guard = self.raw.lock();
 
         guard.lock()?;

@@ -26,3 +26,7 @@ widestring = "0.4"
 [dev-dependencies]
 matches = "0.1"
 uuid = { version = "0.8", features = ["v4"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
