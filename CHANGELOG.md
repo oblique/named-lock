@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.0]
+
 ### Added
 
 - Added `NamedLock::with_path` on UNIX ([#2], [#4])
@@ -19,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Error::CreateFailed` now has the source of the error
 - Upgrade all dependencies
 
+
+[unreleased]: https://github.com/oblique/named-lock/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/oblique/named-lock/compare/0.1.1...0.2.0
 
 [#4]: https://github.com/oblique/named-lock/issues/4
 [#2]: https://github.com/oblique/named-lock/issues/2
