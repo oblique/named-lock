@@ -9,12 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `NamedLock::with_path` on UNIX (#2, #4)
+- Added `NamedLock::with_path` on UNIX ([#2], [#4])
 
 ### Changed
 
-- `NamedLock::create` on UNIX respects `TMPDIR` environment variable (#1, #4)
-- `NamedLock::create` now rejects names that contain `/` or `\` characters (#2, #4)
+- `NamedLock::create` on UNIX respects `TMPDIR` environment variable ([#1], [#4])
+- `NamedLock::create` now rejects names that contain `/` or `\` characters ([#2], [#4])
 - `NamedLock::create` on Windows explicitly creates a global mutex
 - `Error::CreateFailed` now has the source of the error
 - Upgrade all dependencies
+
+
+[#4]: https://github.com/oblique/named-lock/issues/4
+[#2]: https://github.com/oblique/named-lock/issues/2
+[#1]: https://github.com/oblique/named-lock/issues/1
