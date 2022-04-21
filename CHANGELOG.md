@@ -17,3 +17,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NamedLock::create` now rejects names that contain `/` or `\` characters (#2, #4)
 - `NamedLock::create` on Windows explicitly creates a global mutex
 - `Error::CreateFailed` now has the source of the error
+- Upgrade all dependencies

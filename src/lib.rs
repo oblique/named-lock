@@ -177,7 +177,6 @@ impl<'r> Drop for NamedLockGuard<'r> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
     use std::env;
     use std::process::{Child, Command};
     use std::thread::sleep;
@@ -202,7 +201,7 @@ mod tests {
             .and_then(|v| v.parse().ok())
             .unwrap_or(0);
         let uuid = env::var("TEST_CROSS_PROCESS_LOCK_UUID")
-            .unwrap_or_else(|_| Uuid::new_v4().to_hyphenated().to_string());
+            .unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string());
 
         match proc_num {
             0 => {
@@ -213,7 +212,7 @@ mod tests {
                 sleep(Duration::from_millis(200));
 
                 let lock = NamedLock::create(&uuid)?;
-                assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
+                assert!(matches!(lock.try_lock(), Err(Error::WouldBlock)));
                 lock.lock().expect("failed to lock");
 
                 assert!(handle2.wait().unwrap().success());
@@ -224,14 +223,14 @@ mod tests {
                     NamedLock::create(&uuid).expect("failed to create lock");
 
                 let _guard = lock.lock().expect("failed to lock");
-                assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
+                assert!(matches!(lock.try_lock(), Err(Error::WouldBlock)));
                 sleep(Duration::from_millis(200));
             }
             2 => {
                 let lock =
                     NamedLock::create(&uuid).expect("failed to create lock");
 
-                assert_matches!(lock.try_lock(), Err(Error::WouldBlock));
+                assert!(matches!(lock.try_lock(), Err(Error::WouldBlock)));
                 let _guard = lock.lock().expect("failed to lock");
                 sleep(Duration::from_millis(300));
             }
@@ -243,20 +242,20 @@ mod tests {
 
     #[test]
     fn edge_cases() -> Result<()> {
-        let uuid = Uuid::new_v4().to_hyphenated().to_string();
+        let uuid = Uuid::new_v4().as_hyphenated().to_string();
         let lock1 = NamedLock::create(&uuid)?;
         let lock2 = NamedLock::create(&uuid)?;
 
         {
             let _guard1 = lock1.try_lock()?;
-            assert_matches!(lock1.try_lock(), Err(Error::WouldBlock));
-            assert_matches!(lock2.try_lock(), Err(Error::WouldBlock));
+            assert!(matches!(lock1.try_lock(), Err(Error::WouldBlock)));
+            assert!(matches!(lock2.try_lock(), Err(Error::WouldBlock)));
         }
 
         {
             let _guard2 = lock2.try_lock()?;
-            assert_matches!(lock1.try_lock(), Err(Error::WouldBlock));
-            assert_matches!(lock2.try_lock(), Err(Error::WouldBlock));
+            assert!(matches!(lock1.try_lock(), Err(Error::WouldBlock)));
+            assert!(matches!(lock2.try_lock(), Err(Error::WouldBlock)));
         }
 
         Ok(())
