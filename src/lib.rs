@@ -18,17 +18,6 @@
 //!     Ok(())
 //! }
 //! ```
-//!
-//! ## Implementation
-//!
-//! On UNIX systems this is implemented by using files and [`flock`]. The path of
-//! the created lock file will be `/tmp/<name>.lock`.
-//!
-//! On Windows this is implemented by creating named mutex with [`CreateMutexW`].
-//!
-//!
-//! [`flock`]: https://linux.die.net/man/2/flock
-//! [`CreateMutexW`]: https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw
 
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, MutexGuard};
@@ -79,13 +68,18 @@ impl NamedLock {
     ///
     /// # UNIX
     ///
-    /// This will create/open a file at `/tmp/<name>.lock`. If you want to
-    /// specify the exact path, then use [NamedLock::with_path].
+    /// This will create/open a file and use [`flock`] on it. The path of
+    /// the lock file will be `$TMPDIR/<name>.lock`, or `/tmp/<name>.lock`
+    /// if `TMPDIR` environment variable is not set.
+    ///
+    /// If you want to specify the exact path, then use [NamedLock::with_path].
     ///
     /// # Windows
     ///
     /// This will create/open a [global] mutex with [`CreateMutexW`].
     ///
+    ///
+    /// [`flock`]: https://linux.die.net/man/2/flock
     /// [global]: https://docs.microsoft.com/en-us/windows/win32/termserv/kernel-object-namespaces
     /// [`CreateMutexW`]: https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw
     pub fn create(name: &str) -> Result<NamedLock> {
@@ -97,8 +91,13 @@ impl NamedLock {
             return Err(Error::InvalidCharacter);
         }
 
+        // If `TMPDIR` environment variable is set then use it as the
+        // temporary directory, otherwise use `/tmp`.
         #[cfg(unix)]
-        let name = Path::new("/tmp").join(format!("{}.lock", name));
+        let name = std::env::var_os("TMPDIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("/tmp"))
+            .join(format!("{}.lock", name));
 
         #[cfg(windows)]
         let name = format!("Global\\{}", name);
