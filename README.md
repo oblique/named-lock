@@ -25,8 +25,9 @@ fn main() -> Result<()> {
 
 ## Implementation
 
-On UNIX systems this is implemented by using files and [`flock`]. The path of
-the created lock file will be `/tmp/<name>.lock`.
+On UNIX this is implemented by using files and [`flock`]. The path of the
+created lock file will be `$TMPDIR/<name>.lock`, or `/tmp/<name>.lock` if
+`TMPDIR` environment variable is not set.
 
 On Windows this is implemented by creating named mutex with [`CreateMutexW`].
 

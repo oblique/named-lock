@@ -1,3 +1,4 @@
+use std::io;
 use std::ptr;
 use widestring::WideCString;
 use winapi::shared::winerror::WAIT_TIMEOUT;
@@ -22,7 +23,7 @@ impl RawNamedLock {
         let handle = unsafe { CreateMutexW(ptr::null_mut(), 0, name.as_ptr()) };
 
         if handle.is_null() {
-            Err(Error::CreateFailed)
+            Err(Error::CreateFailed(io::Error::last_os_error()))
         } else {
             Ok(RawNamedLock {
                 handle,
