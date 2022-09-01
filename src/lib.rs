@@ -87,7 +87,10 @@ impl NamedLock {
         // so we block the `/` character.
         //
         // On Windows `\` character is invalid.
-        if name.contains('/') || name.contains('\\') {
+        //
+        // Both platforms expect null-terminated strings,
+        // so we block null-bytes.
+        if name.chars().any(|c| matches!(c, '\0' | '/' | '\\')) {
             return Err(Error::InvalidCharacter);
         }
 
