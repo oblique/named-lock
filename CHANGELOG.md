@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.3.0]
+
+### Changed
+
+- `NamedLock::create` now rejects names that contain `\0` character ([#5])
+- `NamedLock::create` now rejects empty names
+- Upgrade all dependencies
+
 ## [0.2.0]
 
 ### Added
@@ -22,9 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade all dependencies
 
 
-[unreleased]: https://github.com/oblique/named-lock/compare/0.2.0...HEAD
+[unreleased]: https://github.com/oblique/named-lock/compare/0.3.0...HEAD
 [0.2.0]: https://github.com/oblique/named-lock/compare/0.1.1...0.2.0
+[0.3.0]: https://github.com/oblique/named-lock/compare/0.2.0...0.3.0
 
+[#5]: https://github.com/oblique/named-lock/issues/5
 [#4]: https://github.com/oblique/named-lock/issues/4
 [#2]: https://github.com/oblique/named-lock/issues/2
 [#1]: https://github.com/oblique/named-lock/issues/1
