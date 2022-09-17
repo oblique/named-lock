@@ -78,11 +78,19 @@ impl NamedLock {
     ///
     /// This will create/open a [global] mutex with [`CreateMutexW`].
     ///
+    /// # Notes
+    ///
+    /// * `name` must not be empty, otherwise an error is returned.
+    /// * `name` must not contain `\0`, `/`, nor `\`, otherwise an error is returned.
     ///
     /// [`flock`]: https://linux.die.net/man/2/flock
     /// [global]: https://docs.microsoft.com/en-us/windows/win32/termserv/kernel-object-namespaces
     /// [`CreateMutexW`]: https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw
     pub fn create(name: &str) -> Result<NamedLock> {
+        if name.is_empty() {
+            return Err(Error::EmptyName);
+        }
+
         // On UNIX we want to restrict the user on `/tmp` directory,
         // so we block the `/` character.
         //
@@ -112,8 +120,8 @@ impl NamedLock {
     ///
     /// # Notes
     ///
-    /// * This function does not append `.lock` on the path
-    /// * Parent directories must exist
+    /// * This function does not append `.lock` on the path.
+    /// * Parent directories must exist.
     #[cfg(unix)]
     #[cfg_attr(docsrs, doc(cfg(unix)))]
     pub fn with_path<P>(path: P) -> Result<NamedLock>
@@ -262,5 +270,25 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn invalid_names() {
+        assert!(matches!(NamedLock::create(""), Err(Error::EmptyName)));
+
+        assert!(matches!(
+            NamedLock::create("abc/"),
+            Err(Error::InvalidCharacter)
+        ));
+
+        assert!(matches!(
+            NamedLock::create("abc\\"),
+            Err(Error::InvalidCharacter)
+        ));
+
+        assert!(matches!(
+            NamedLock::create("abc\0"),
+            Err(Error::InvalidCharacter)
+        ));
     }
 }

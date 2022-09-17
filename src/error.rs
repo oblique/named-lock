@@ -9,6 +9,9 @@ pub enum Error {
     #[error("Invalid character in name")]
     InvalidCharacter,
 
+    #[error("Name must not be empty")]
+    EmptyName,
+
     #[error("Failed to create named lock: {0}")]
     CreateFailed(#[source] std::io::Error),
 
