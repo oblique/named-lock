@@ -20,8 +20,10 @@
 //! ```
 
 use once_cell::sync::Lazy;
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::lock_api::ArcMutexGuard;
+use parking_lot::{Mutex, RawMutex};
 use std::collections::HashMap;
+use std::fmt;
 #[cfg(unix)]
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
@@ -152,7 +154,7 @@ impl NamedLock {
     ///
     /// If it is already locked, `Error::WouldBlock` will be returned.
     pub fn try_lock(&self) -> Result<NamedLockGuard> {
-        let guard = self.raw.try_lock().ok_or(Error::WouldBlock)?;
+        let guard = self.raw.try_lock_arc().ok_or(Error::WouldBlock)?;
 
         guard.try_lock()?;
 
@@ -163,7 +165,7 @@ impl NamedLock {
 
     /// Lock named lock.
     pub fn lock(&self) -> Result<NamedLockGuard> {
-        let guard = self.raw.lock();
+        let guard = self.raw.lock_arc();
 
         guard.lock()?;
 
@@ -174,21 +176,28 @@ impl NamedLock {
 }
 
 /// Scoped guard that unlocks NamedLock.
-#[derive(Debug)]
-pub struct NamedLockGuard<'r> {
-    raw: MutexGuard<'r, RawNamedLock>,
+pub struct NamedLockGuard {
+    raw: ArcMutexGuard<RawMutex, RawNamedLock>,
 }
 
-impl<'r> Drop for NamedLockGuard<'r> {
+impl Drop for NamedLockGuard {
     fn drop(&mut self) {
         let _ = self.raw.unlock();
+    }
+}
+
+impl fmt::Debug for NamedLockGuard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NamedLockGuard").field("raw", &*self.raw).finish()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use static_assertions::assert_impl_all;
     use std::env;
+    use std::fmt::Debug;
     use std::process::{Child, Command};
     use std::thread::sleep;
     use std::time::Duration;
@@ -273,6 +282,29 @@ mod tests {
     }
 
     #[test]
+    fn owned_guard() -> Result<()> {
+        let uuid = Uuid::new_v4().as_hyphenated().to_string();
+        let lock1 = NamedLock::create(&uuid)?;
+        let lock2 = NamedLock::create(&uuid)?;
+
+        // Lock
+        let guard1 = lock1.try_lock()?;
+        assert!(matches!(lock2.try_lock(), Err(Error::WouldBlock)));
+
+        // If `NamedLockGuard` is still alive the lock must stay locked
+        drop(lock1);
+        assert!(matches!(lock2.try_lock(), Err(Error::WouldBlock)));
+
+        // Unlock by dropping the guard
+        drop(guard1);
+
+        // Now locking will succeed
+        let _guard2 = lock2.try_lock()?;
+
+        Ok(())
+    }
+
+    #[test]
     fn invalid_names() {
         assert!(matches!(NamedLock::create(""), Err(Error::EmptyName)));
 
@@ -290,5 +322,11 @@ mod tests {
             NamedLock::create("abc\0"),
             Err(Error::InvalidCharacter)
         ));
+    }
+
+    #[test]
+    fn check_traits() {
+        assert_impl_all!(NamedLock: Debug, Send, Sync);
+        assert_impl_all!(NamedLockGuard: Debug, Send, Sync);
     }
 }
