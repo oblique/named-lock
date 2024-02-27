@@ -291,14 +291,13 @@ mod tests {
         let guard1 = lock1.try_lock()?;
         assert!(matches!(lock2.try_lock(), Err(Error::WouldBlock)));
 
-        // If `NamedLockGuard` is still alive the lock must stay locked
+        // Dropping `lock1` should not affect the state of the lock.
+        // If `guard1` is not dropped the lock must stay locked.
         drop(lock1);
         assert!(matches!(lock2.try_lock(), Err(Error::WouldBlock)));
 
-        // Unlock by dropping the guard
+        // Unlock by dropping the `guard1`
         drop(guard1);
-
-        // Now locking will succeed
         let _guard2 = lock2.try_lock()?;
 
         Ok(())
