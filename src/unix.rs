@@ -16,8 +16,8 @@ impl RawNamedLock {
         let lock_file = OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(&lock_path)
-            .or_else(|_| OpenOptions::new().write(true).open(&lock_path))
+            .open(lock_path)
+            .or_else(|_| OpenOptions::new().write(true).open(lock_path))
             .map_err(Error::CreateFailed)?;
 
         Ok(RawNamedLock {
