@@ -1,11 +1,14 @@
-use std::io;
-use std::ptr;
-use widestring::WideCString;
-use winapi::shared::winerror::WAIT_TIMEOUT;
-use winapi::um::handleapi::CloseHandle;
-use winapi::um::synchapi::{CreateMutexW, ReleaseMutex, WaitForSingleObject};
-use winapi::um::winbase::{INFINITE, WAIT_ABANDONED, WAIT_OBJECT_0};
-use winapi::um::winnt::HANDLE;
+use windows::{
+    core::HSTRING,
+    Win32::{
+        Foundation::{
+            CloseHandle, HANDLE, WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT,
+        },
+        System::Threading::{
+            CreateMutexW, ReleaseMutex, WaitForSingleObject, INFINITE,
+        },
+    },
+};
 
 use crate::error::*;
 
@@ -19,16 +22,14 @@ unsafe impl Send for RawNamedLock {}
 
 impl RawNamedLock {
     pub(crate) fn create(name: &str) -> Result<RawNamedLock> {
-        let name = WideCString::from_str(name).unwrap();
-        let handle = unsafe { CreateMutexW(ptr::null_mut(), 0, name.as_ptr()) };
+        let handle = unsafe {
+            CreateMutexW(None, false, &HSTRING::from(name))
+                .map_err(|e| Error::CreateFailed(std::io::Error::from(e)))?
+        };
 
-        if handle.is_null() {
-            Err(Error::CreateFailed(io::Error::last_os_error()))
-        } else {
-            Ok(RawNamedLock {
-                handle,
-            })
-        }
+        Ok(RawNamedLock {
+            handle,
+        })
     }
 
     pub(crate) fn try_lock(&self) -> Result<()> {
@@ -54,20 +55,14 @@ impl RawNamedLock {
     }
 
     pub(crate) fn unlock(&self) -> Result<()> {
-        let rc = unsafe { ReleaseMutex(self.handle) };
-
-        if rc == 0 {
-            Err(Error::UnlockFailed)
-        } else {
-            Ok(())
-        }
+        unsafe { ReleaseMutex(self.handle).map_err(|_| Error::UnlockFailed) }
     }
 }
 
 impl Drop for RawNamedLock {
     fn drop(&mut self) {
         unsafe {
-            CloseHandle(self.handle);
+            let _ = CloseHandle(self.handle);
         }
     }
 }
