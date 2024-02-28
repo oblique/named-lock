@@ -1,11 +1,11 @@
 use std::io;
 
 use windows::core::HSTRING;
-use windows::System::Threading::{
-    CreateMutexW, ReleaseMutex, WaitForSingleObject, INFINITE,
-};
 use windows::Win32::Foundation::{
     CloseHandle, HANDLE, WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT,
+};
+use windows::Win32::System::Threading::{
+    CreateMutexW, ReleaseMutex, WaitForSingleObject, INFINITE,
 };
 
 use crate::error::*;
