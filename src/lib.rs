@@ -19,14 +19,15 @@
 //! }
 //! ```
 
-use once_cell::sync::Lazy;
-use parking_lot::lock_api::ArcMutexGuard;
-use parking_lot::{Mutex, RawMutex};
 use std::collections::HashMap;
 use std::fmt;
 #[cfg(unix)]
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
+
+use once_cell::sync::Lazy;
+use parking_lot::lock_api::ArcMutexGuard;
+use parking_lot::{Mutex, RawMutex};
 
 mod error;
 #[cfg(unix)]

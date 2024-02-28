@@ -1,8 +1,9 @@
-use libc::{LOCK_EX, LOCK_NB, LOCK_UN};
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::path::Path;
+
+use libc::{LOCK_EX, LOCK_NB, LOCK_UN};
 
 use crate::error::*;
 

@@ -1,13 +1,11 @@
-use windows::{
-    core::HSTRING,
-    Win32::{
-        Foundation::{
-            CloseHandle, HANDLE, WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT,
-        },
-        System::Threading::{
-            CreateMutexW, ReleaseMutex, WaitForSingleObject, INFINITE,
-        },
-    },
+use std::io;
+
+use windows::core::HSTRING;
+use windows::System::Threading::{
+    CreateMutexW, ReleaseMutex, WaitForSingleObject, INFINITE,
+};
+use windows::Win32::Foundation::{
+    CloseHandle, HANDLE, WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 
 use crate::error::*;
@@ -24,7 +22,7 @@ impl RawNamedLock {
     pub(crate) fn create(name: &str) -> Result<RawNamedLock> {
         let handle = unsafe {
             CreateMutexW(None, false, &HSTRING::from(name))
-                .map_err(|e| Error::CreateFailed(std::io::Error::from(e)))?
+                .map_err(|e| Error::CreateFailed(io::Error::from(e)))?
         };
 
         Ok(RawNamedLock {
